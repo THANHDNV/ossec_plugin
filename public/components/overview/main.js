@@ -166,12 +166,12 @@ export class Main extends React.Component {
   }
 
   componentDidMount() {
-    // const { httpClient } = this.props;
-    // httpClient.get('http://192.168.127.128:55000/agents/').then((resp) => {
-    //   this.setState({ data: resp.data }, () => {
-    //     console.log(this.state);
-    //   });
-    // });
+    const { httpClient } = this.props;
+    httpClient.get('http://localhost:55000/agents/').then((resp) => {
+      this.setState({ data: resp.data }, () => {
+        console.log(this.state);
+      });
+    });
   }
 
   renderStatus = (status) => {
