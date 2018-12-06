@@ -24,7 +24,7 @@ function RootController($scope, $element, $http) {
   const domNode = $element[0];
 
   // render react to DOM
-  render(<Main title="ossec-plugin" httpClient={$http} />, domNode);
+  render(<Main title="OSSEC Managing Plugin" httpClient={$http} />, domNode);
 
   // unmount react on controller destroy
   $scope.$on('$destroy', () => {

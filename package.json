@@ -4,7 +4,7 @@
   "description": "A plugin to manage OSSEC",
   "main": "index.js",
   "kibana": {
-    "version": "6.5.1",
+    "version": "6.5.2",
     "templateVersion": "1.0.0"
   },
   "scripts": {
