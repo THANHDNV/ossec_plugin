@@ -9,8 +9,7 @@ export default function (kibana) {
         title: 'Ossec Plugin',
         description: 'A plugin to manage OSSEC',
         main: 'plugins/ossec_plugin/app',
-      },
-      styleSheetPaths: require('path').resolve(__dirname, 'public/app.scss'),
+      }
     },
 
     config(Joi) {
