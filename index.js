@@ -15,6 +15,7 @@ export default function (kibana) {
     config(Joi) {
       return Joi.object({
         enabled: Joi.boolean().default(true),
+        apiPath: Joi.string().default('http://localhost:55000/'),
       }).default();
     },
 
