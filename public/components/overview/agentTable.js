@@ -188,10 +188,10 @@ export class AgentTable extends React.Component {
     this.showInfoModal = this.showInfoModal.bind(this);
     this.onTableChange = this.onTableChange.bind(this);
     this.updateData = this.updateData.bind(this);
+    this.restartAgent = this.restartAgent.bind(this);
   }
 
   updateData() {
-    console.log("Update data");
     fetch('../api/ossec-plugin/api-path').then(response => {
       return response.json();
     }).then(resp => {
@@ -200,9 +200,7 @@ export class AgentTable extends React.Component {
       fetch(url).then((resp) => {
         return resp.json();
       }).then((resp) => {
-        console.log(resp.data);
-        this.setState({ data: resp.data }, () => {
-          console.log(this.state);
+        this.setState({ data: resp.data, selectedItems: [], }, () => {
         });
       }).catch((reason) => {
         console.log("No reponse");
@@ -335,7 +333,7 @@ export class AgentTable extends React.Component {
           selectAgent
         } = this.state;
         modalBody = (
-          <AgentDetailForm agentId={selectAgent.id} />
+          <AgentDetailForm agentId={selectAgent.id} onNotFound={this.showInfoModal} onDelete={this.deleteAgent} onRestart={this.restartAgent} onClose={this.closeModal}/>
         );
         break;
       case MODAL_INFO:
@@ -391,8 +389,6 @@ export class AgentTable extends React.Component {
     });
   }
 
-
-
   deleteAgent(agent) {
     //delete single agent action
     fetch('../api/ossec-plugin/api-path').then(response => {
@@ -426,10 +422,50 @@ export class AgentTable extends React.Component {
     this.setState({ selectedItems: [] });
   }
 
-  runCommand(agent) {
+  restartAgent(agents) {
     //run active response action
 
-    this.setState({ selectedItems: [] });
+    fetch('../api/ossec-plugin/api-path').then(response => {
+      return response.json();
+    }).then(resp => {
+      const apiPath = resp.apiPath.trim();
+      const url = apiPath + (apiPath[apiPath.length - 1] === '/' ? '' : '/') + 'agents/restart';
+
+      const data = { 'ids': agents };
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      }).then(resp => {
+        return resp.json();
+      }).then((resp) => {
+        console.log(resp);
+        switch(parseInt(resp.error)) {
+          case 0:
+            const msg = [
+              resp.data.msg,
+              'Affected agents: ' + resp.data.affected_agents.join()
+            ];
+            this.showInfoModal(msg);
+            setTimeout(this.updateData, 1500);
+            break;
+          case 1701:
+            this.showInfoModal('Agent does not exist');
+            break;
+          default:
+            break;
+        }
+      });
+    }).catch((reason) => {
+      console.log("No reponse");
+      console.log(reason);
+    });
+  }
+
+  restartAgents() {
+
   }
 
   renderDeleteButton() {
@@ -488,10 +524,12 @@ export class AgentTable extends React.Component {
       onClick: this.deleteAgent,
       isPrimary: true
     }, {
-      name: 'Run command',
-      description: 'Run active response on the agent',
+      name: 'Restart agent',
+      description: 'Restart the agent',
       icon: 'console',
-      onClick: this.runCommand
+      onClick: (agent) => {
+        this.restartAgent([agent.id]);
+      }
     }];
 
     const columns = [{
