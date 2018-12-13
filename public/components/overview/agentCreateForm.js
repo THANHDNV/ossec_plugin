@@ -20,7 +20,6 @@ export class AgentCreateForm extends React.Component {
       ipError: '',
       agentName: '',
       agentIp: '',
-      resultValue: '',
       isagentNamedisabled: false,
       isagentIpdisabled: false,
     };
@@ -68,7 +67,6 @@ export class AgentCreateForm extends React.Component {
       }).then(resp => {
         return resp.json();
       }).then((resp) => {
-        console.log(resp);
         switch(parseInt(resp.error)) {
           case 0:
             const message = [
@@ -136,15 +134,6 @@ export class AgentCreateForm extends React.Component {
             Save agent
           </EuiButton>
         </EuiFormRow>
-        <EuiFormRow
-          label="Result"
-        >
-          <EuiTextArea
-            disabled
-            value={this.state.resultValue}
-          />
-        </EuiFormRow>
-
       </EuiForm>
     );
   }
