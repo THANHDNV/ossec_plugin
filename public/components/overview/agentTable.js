@@ -192,28 +192,34 @@ export class AgentTable extends React.Component {
   }
 
   updateData() {
-    fetch('../api/ossec-plugin/api-path').then(response => {
-      return response.json();
-    }).then(resp => {
-      const apiPath = resp.apiPath.trim();
-      const url = apiPath + (apiPath[apiPath.length - 1] === '/' ? '' : '/') + 'agents';
-      fetch(url).then((resp) => {
-        return resp.json();
-      }).then((resp) => {
-        this.setState({ data: resp.data, selectedItems: [], }, () => {
+    this.setState({
+      selectedItems: [],
+      data: null
+    }, () => {
+      fetch('../api/ossec-plugin/api-path').then(response => {
+        return response.json();
+      }).then(resp => {
+        const apiPath = resp.apiPath.trim();
+        const url = apiPath + (apiPath[apiPath.length - 1] === '/' ? '' : '/') + 'agents';
+        fetch(url).then((resp) => {
+          return resp.json();
+        }).then((resp) => {
+          this.setState({ data: resp.data }, () => {
+          });
+        }).catch((reason) => {
+          console.log('No reponse');
+          console.log(reason);
         });
       }).catch((reason) => {
-        console.log("No reponse");
+        console.log('No reponse');
         console.log(reason);
       });
-    }).catch((reason) => {
-      console.log("No reponse");
-      console.log(reason);
     });
   }
 
   componentDidMount() {
     this.updateData();
+    setInterval(this.updateData, 5 * 60 * 1000);
   }
 
   onTableChange({ page = {} }) {
@@ -235,7 +241,7 @@ export class AgentTable extends React.Component {
   renderStatus = (status) => {
     let color = '';
     switch(status.toLowerCase()) {
-      case 'alive':
+      case 'active':
         color = 'success';
         break;
       case 'disconnected':
@@ -265,8 +271,14 @@ export class AgentTable extends React.Component {
 
   onClickDelete() {
     const { selectedItems } = this.state;
+
+    for (const i in selectedItems) {
+      if (selectedItems[i].id === '000') {
+        selectedItems.splice(i, 1);
+      }
+    }
+
     // delete multi agent action
-    
     fetch('../api/ossec-plugin/api-path').then(response => {
       return response.json();
     }).then(resp => {
@@ -305,12 +317,8 @@ export class AgentTable extends React.Component {
         }
       });
     }).catch((reason) => {
-      console.log("No reponse");
+      console.log('No reponse');
       console.log(reason);
-    });
-
-    this.setState({
-      selectedItems: []
     });
   }
 
@@ -324,7 +332,8 @@ export class AgentTable extends React.Component {
           <AgentCreateForm onSave={(message) => {
             this.showInfoModal(message, true);
             setTimeout(this.updateData, 5000);
-          }}/>
+          }}
+          />
         );
         break;
       case MODAL_DETAIL:
@@ -333,7 +342,13 @@ export class AgentTable extends React.Component {
           selectAgent
         } = this.state;
         modalBody = (
-          <AgentDetailForm agentId={selectAgent.id} onNotFound={this.showInfoModal} onDelete={this.deleteAgent} onRestart={this.restartAgent} onClose={this.closeModal}/>
+          <AgentDetailForm
+            agentId={selectAgent.id}
+            onNotFound={this.showInfoModal}
+            onDelete={this.deleteAgent}
+            onRestart={this.restartAgent}
+            onClose={this.closeModal}
+          />
         );
         break;
       case MODAL_INFO:
@@ -390,40 +405,43 @@ export class AgentTable extends React.Component {
   }
 
   deleteAgent(agent) {
-    //delete single agent action
-    fetch('../api/ossec-plugin/api-path').then(response => {
-      return response.json();
-    }).then(resp => {
-      const apiPath = resp.apiPath.trim();
-      const url = apiPath + (apiPath[apiPath.length - 1] === '/' ? '' : '/') + 'agents/' + agent.id;
-      fetch(url, {
-        method: 'DELETE'
+    if (agent.id === '000') {
+      this.showInfoModal('Unable to delete manager');
+    } else {
+      //delete single agent action
+      fetch('../api/ossec-plugin/api-path').then(response => {
+        return response.json();
       }).then(resp => {
-        return resp.json();
-      }).then((resp) => {
-        console.log(resp);
-        switch(parseInt(resp.error)) {
-          case 0:
-            this.showInfoModal('Deleted agent');
-            setTimeout(this.updateData, 1500);
-            break;
-          case 1701:
-            this.showInfoModal('Agent does not exist');
-            break;
-          default:
-            break;
-        }
+        const apiPath = resp.apiPath.trim();
+        const url = apiPath + (apiPath[apiPath.length - 1] === '/' ? '' : '/') + 'agents/' + agent.id;
+        fetch(url, {
+          method: 'DELETE'
+        }).then(resp => {
+          return resp.json();
+        }).then((resp) => {
+          console.log(resp);
+          switch(parseInt(resp.error)) {
+            case 0:
+              this.showInfoModal('Deleted agent');
+              setTimeout(this.updateData, 1500);
+              break;
+            case 1701:
+              this.showInfoModal('Agent does not exist');
+              break;
+            default:
+              break;
+          }
+        });
+      }).catch((reason) => {
+        console.log('No reponse');
+        console.log(reason);
       });
-    }).catch((reason) => {
-      console.log("No reponse");
-      console.log(reason);
-    });
+    }
 
     this.setState({ selectedItems: [] });
   }
 
   restartAgent(agents) {
-    //run active response action
 
     fetch('../api/ossec-plugin/api-path').then(response => {
       return response.json();
@@ -459,13 +477,17 @@ export class AgentTable extends React.Component {
         }
       });
     }).catch((reason) => {
-      console.log("No reponse");
+      console.log('No reponse');
       console.log(reason);
     });
   }
 
   restartAgents() {
+    const { selectedItems } = this.state;
 
+    this.restartAgent(selectedItems);
+
+    this.updateData();
   }
 
   renderDeleteButton() {
@@ -482,7 +504,27 @@ export class AgentTable extends React.Component {
           iconType="trash"
           onClick={this.onClickDelete}
         >
-          Delete {selectedItems.length} Users
+          Delete {selectedItems.length} Agents
+        </EuiButton>
+      </EuiFlexItem>
+    );
+  }
+
+  renderRestartButton() {
+    const { selectedItems } = this.state;
+
+    if (selectedItems.length === 0) {
+      return;
+    }
+
+    return (
+      <EuiFlexItem grow={false}>
+        <EuiButton
+          color="warning"
+          iconType="console"
+          onClick={this.updateData}
+        >
+          Restart {selectedItems.length} Agents
         </EuiButton>
       </EuiFlexItem>
     );
@@ -502,13 +544,27 @@ export class AgentTable extends React.Component {
     );
   }
 
+  renderRefreshButton() {
+    return(
+      <EuiFlexItem grow={false}>
+        <EuiButton
+          color="secondary"
+          iconType="refresh"
+          onClick={this.updateData}
+        >
+          Refresh
+        </EuiButton>
+      </EuiFlexItem>
+    );
+  }
+
   render() {
     const {
       pageIndex,
       pageSize,
       showPerPageOptions,
       data,
-      sample_data
+      // sample_data
     } = this.state;
 
     const actions = [{
@@ -533,6 +589,10 @@ export class AgentTable extends React.Component {
     }];
 
     const columns = [{
+      field: 'id',
+      name: 'Agent ID'
+    },
+    {
       field: 'name',
       name: 'Agent Name'
     },
@@ -554,6 +614,10 @@ export class AgentTable extends React.Component {
     const deleteButton = this.renderDeleteButton();
 
     const createButton = this.renderCreateButton();
+
+    const refreshButton = this.renderRefreshButton();
+
+    const restartButton = this.renderRestartButton();
 
     let items = [];
     if (data) {
@@ -580,10 +644,11 @@ export class AgentTable extends React.Component {
     };
 
     const selection = {
-      selectable: (agent) => {
-        // if (agent.status.toLowerCase() === 'Alive') return true;
-        return true;
-      },
+      selectable: () => true,
+      // selectable: (agent) => {
+      //   // if (agent.status.toLowerCase() === 'Alive') return true;
+      //   return true;
+      // },
       selectableMessage: (selectable) => !selectable ? 'No such agent!' : undefined,
       onSelectionChange: this.onSelectionChange
     };
@@ -596,11 +661,12 @@ export class AgentTable extends React.Component {
     return(
       <React.Fragment>
         <EuiFlexGroup alignItems="center" gutterSize="s">
+          {refreshButton}
           {createButton}
+          {restartButton}
           {deleteButton}
         </EuiFlexGroup>
-        
-        <EuiBasicTable 
+        <EuiBasicTable
           columns={columns}
           items={items}
           itemId="id"
